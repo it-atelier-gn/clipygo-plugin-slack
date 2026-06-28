@@ -1,6 +1,6 @@
 [package]
 name = "clipygo-plugin-slack"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Slack target provider for clipygo"
 authors = ["Georg Nelles"]
