@@ -1,9 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// Stored at:
-///   Windows : %APPDATA%\clipygo-plugin-slack\config.json
-///   macOS   : ~/Library/Application Support/clipygo-plugin-slack/config.json
-///   Linux   : ~/.config/clipygo-plugin-slack/config.json
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Config {
     #[serde(default)]
@@ -11,11 +7,27 @@ pub struct Config {
 }
 
 pub fn config_path() -> std::path::PathBuf {
-    let dir = dirs::config_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("clipygo-plugin-slack");
+    let dir = config_dir();
     let _ = std::fs::create_dir_all(&dir);
     dir.join("config.json")
+}
+
+#[cfg(not(test))]
+fn config_dir() -> std::path::PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("clipygo-plugin-slack")
+}
+
+#[cfg(test)]
+fn config_dir() -> std::path::PathBuf {
+    std::env::temp_dir()
+        .join("clipygo-plugin-slack-tests")
+        .join(format!(
+            "{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ))
 }
 
 pub fn load_config() -> Config {
@@ -28,5 +40,23 @@ pub fn load_config() -> Config {
 pub fn save_config(config: &Config) {
     if let Ok(data) = serde_json::to_string_pretty(config) {
         let _ = std::fs::write(config_path(), data);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_path_stays_out_of_user_config_dir() {
+        if let Some(real) = dirs::config_dir() {
+            assert!(!config_path().starts_with(real.join("clipygo-plugin-slack")));
+        }
+    }
+
+    #[test]
+    fn config_path_differs_per_thread() {
+        let other = std::thread::spawn(config_path).join().unwrap();
+        assert_ne!(config_path(), other);
     }
 }
